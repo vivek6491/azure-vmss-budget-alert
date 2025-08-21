@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: '/azure-vmss-budget-alert.git'
+                git url: 'https://github.com/vivek6491/azure-vmss-budget-alert.git'
             }
         }
 
