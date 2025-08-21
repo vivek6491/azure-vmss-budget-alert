@@ -1,0 +1,62 @@
+pipeline {
+  agent any
+
+  parameters {
+    choice(
+      name: 'Action',
+      choices: ['apply', 'destroy'],
+      description: 'Choose whether to apply or destroy the Terraform-managed resources'
+    )
+  }
+
+  environment {
+    // Azure Service Principal credentials - ensure these are set in Jenkins credentials
+    ARM_CLIENT_ID       = credentials('ARM_CLIENT_ID')
+    ARM_CLIENT_SECRET   = credentials('ARM_CLIENT_SECRET')
+    ARM_SUBSCRIPTION_ID = credentials('ARM_SUBSCRIPTION_ID')
+    ARM_TENANT_ID       = credentials('ARM_TENANT_ID')
+  }
+
+  stages {
+    stage('Checkout Code') {
+      steps {
+        git branch: 'main', url: 'https://github.com/vivek6491/azure-vmss-budget-alert.git'
+      }
+    }
+
+    stage('Terraform Init') {
+      steps {
+        sh 'terraform init'
+      }
+    }
+
+    stage('Terraform Plan') {
+      when {
+        expression { params.Action == 'apply' }
+      }
+      steps {
+        sh 'terraform plan'
+      }
+    }
+
+    stage('Terraform Apply or Destroy') {
+      steps {
+        script {
+          if (params.Action == 'apply') {
+            sh 'terraform apply -auto-approve'
+          } else if (params.Action == 'destroy') {
+            sh 'terraform destroy -auto-approve'
+          } else {
+            error "Unknown action: ${params.Action}"
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "Terraform action '${params.Action}' completed."
+    }
+  }
+}
